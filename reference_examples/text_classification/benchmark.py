@@ -41,6 +41,9 @@ DEFAULT_SEED = 42
 _SKIP_MEMORY_FILES = {"__init__", "fewshot_memory"}
 
 
+_PARENT_DIR = str(Path(__file__).parent.parent)
+
+
 def discover_all_memory_systems() -> list[tuple[str, str]]:
     """Auto-discover all memory system .py files on disk."""
     base = Path(__file__).parent
@@ -432,7 +435,7 @@ def build_val_runs(
                     desc = f"val/{dataset}/{mem_name}/{model_name}"
                     cmd = [
                         "env",
-                        "PYTHONPATH=..",
+                        f"PYTHONPATH={_PARENT_DIR}",
                         "uv",
                         "run",
                         "python",
@@ -519,7 +522,7 @@ def build_test_runs(
                     desc = f"test/{dataset}/{mem_name}/{model_name}"
                     cmd = [
                         "env",
-                        "PYTHONPATH=..",
+                        f"PYTHONPATH={_PARENT_DIR}",
                         "uv",
                         "run",
                         "python",
