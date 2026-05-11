@@ -136,7 +136,7 @@ def build_command(
         "--model",
         model,
         "--setting-sources",
-        "",
+        "user",
     ]
 
     effective_tools = tools if tools is not None else allowed_tools
