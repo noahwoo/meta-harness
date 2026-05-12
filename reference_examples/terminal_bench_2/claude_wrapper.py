@@ -9,6 +9,7 @@ import json
 import os
 import queue
 import re
+import shlex
 import subprocess
 import threading
 import time
@@ -18,6 +19,9 @@ from pathlib import Path
 
 DEFAULT_LOG_DIR = os.environ.get("CLAUDE_WRAPPER_LOG_DIR", "experience")
 _EMPTY_PLUGIN_DIR = Path(__file__).parent / ".empty_plugins"
+
+# User to run Claude CLI as (--dangerously-skip-permissions disallows root)
+_CLAUDE_USER = os.environ.get("CLAUDE_WRAPPER_USER", "coder")
 
 # Common tool sets
 TOOLS_READ = ["Read", "Glob", "Grep"]
@@ -475,6 +479,31 @@ def load_skills(skills, skill_dir=None):
     return loaded
 
 
+def _wrap_cmd_for_user(cmd, env, cwd):
+    """Wrap command to run as _CLAUDE_USER if current process is root.
+
+    Returns (cmd, env) tuple. When running as root, wraps
+    the claude command in `su - <user> -c '...'` to satisfy the
+    --dangerously-skip-permissions security restriction.
+    """
+    if os.getuid() != 0:
+        return cmd, env
+
+    env_exports = []
+    for key in sorted(env.keys()):
+        if key.startswith(("ANTHROPIC_", "OPENAI_", "OPENROUTER_", "QIANFAN_",
+                           "CLAUDE_", "TERMINAL_BENCH_", "HARBOR_", "E2B_")):
+            env_exports.append(f"export {key}={shlex.quote(env[key])}")
+    env_exports.append(f"export HOME=/home/{_CLAUDE_USER}")
+
+    env_str = "; ".join(env_exports) + "; " if env_exports else ""
+    cd_str = f"cd {shlex.quote(cwd or os.getcwd())} && " if cwd else ""
+    cmd_str = " ".join(shlex.quote(c) for c in cmd)
+
+    shell_cmd = ["su", "-", _CLAUDE_USER, "-c", f"{env_str}{cd_str}{cmd_str}"]
+    return shell_cmd, env
+
+
 def _default_progress(event, tool_calls):
     """Default progress callback: print one line per tool call to stderr."""
     if event.get("type") != "assistant":
@@ -576,6 +605,11 @@ def run(
     if "ANTHROPIC_API_KEY" not in env:
         pass  # will use subscription auth automatically
 
+    # Wrap command for non-root execution if running as root
+    run_cmd_list, env = _wrap_cmd_for_user(cmd, env, effective_cwd)
+    # When wrapped via su, cwd is handled inside the shell command
+    popen_cwd = None if os.getuid() == 0 else cwd
+
     # Resolve progress callback
     if progress is True:
         on_event = _default_progress
@@ -592,12 +626,12 @@ def run(
     _live_tool_calls = []
     try:
         proc = subprocess.Popen(
-            cmd,
+            run_cmd_list,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL,
             text=True,
-            cwd=cwd,
+            cwd=popen_cwd,
             env=env,
         )
         deadline = start + timeout_seconds if timeout_seconds else None

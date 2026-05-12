@@ -96,7 +96,7 @@ N_EVAL_TASKS = 89  # full official TB2 dataset used in the paper runs
 SMOKE_TEST_TASK = "extract-elf"  # simple task, reliably fast
 
 DATASET = "terminal-bench@2.0"
-MODEL = "anthropic/claude-opus-4-6"
+MODEL = "qianfan/deepseek-v3.2"
 DEFAULT_SEARCH_TRIALS = 2
 DEFAULT_CONCURRENCY = 50
 
@@ -124,7 +124,7 @@ def run_cmd(cmd, timeout=7200, cwd=None):
     env = os.environ.copy()
     env["HARBOR_MODEL"] = MODEL
     # Ensure dotenv-loaded keys survive through uv run subprocess
-    for key in ("RUNLOOP_API_KEY", "ANTHROPIC_API_KEY"):
+    for key in ("E2B_API_KEY", "ANTHROPIC_API_KEY", "QIANFAN_API_KEY"):
         val = os.environ.get(key)
         if val:
             env[key] = val
@@ -137,7 +137,7 @@ def run_cmd(cmd, timeout=7200, cwd=None):
 
 
 def harbor_run(import_path, job_name, n_trials=2, n_concurrent=10):
-    """Run harbor eval on the paper TB2 config via runloop.
+    """Run harbor eval on the paper TB2 config via e2b.
 
     result_dict is None if harbor crashed hard; job_dir may still have partial results.
     """
@@ -503,7 +503,7 @@ def render_task_prompt(iteration, n_trials):
     """Build the prompt for the proposer Claude session."""
     return (
         f"Run iteration {iteration} of the scaffold evolution loop (KIRA track). "
-        f"Model: {MODEL} (Opus). "
+        f"Model: {MODEL}. "
         f"Start from agents/baseline_kira.py as the parent.\n\n"
         f"## Eval split: {N_EVAL_TASKS} official TB2 tasks x {n_trials} trials\n\n"
         f"This reference example uses the full TB2 dataset from the paper runs. "
