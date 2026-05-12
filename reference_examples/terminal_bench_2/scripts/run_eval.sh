@@ -23,16 +23,10 @@ fi
 
 MODEL="${HARBOR_MODEL:-qianfan/deepseek-v3.2}"
 
-# Translate qianfan/ models to anthropic/ for litellm, using Qianfan's
-# Anthropic-compatible API endpoint.
-QIANFAN_FLAGS=()
+# For qianfan/ models, set ANTHROPIC_API_KEY from QIANFAN_API_KEY
+# (Qianfan exposes an Anthropic-compatible API)
 if [[ "$MODEL" == qianfan/* ]]; then
-    LITELLM_MODEL="anthropic/${MODEL#qianfan/}"
-    QIANFAN_API_BASE="https://qianfan.baidubce.com/anthropic"
-    QIANFAN_FLAGS+=(--ak "api_base=${QIANFAN_API_BASE}")
     export ANTHROPIC_API_KEY="${QIANFAN_API_KEY:?QIANFAN_API_KEY must be set for qianfan/ models}"
-else
-    LITELLM_MODEL="$MODEL"
 fi
 
 # 30-task hard subset for cheaper development and debugging loops.
@@ -77,11 +71,10 @@ CMD=(
     uv run harbor run
     --agent-import-path "$AGENT_IMPORT_PATH"
     -d "terminal-bench@2.0"
-    -m "$LITELLM_MODEL"
+    -m "$MODEL"
     -e e2b
     -n "$N_CONCURRENT"
     --n-attempts "$RUNS"
-    "${QIANFAN_FLAGS[@]}"
 )
 if [[ ${#TASK_FLAGS[@]} -gt 0 ]]; then
     CMD+=("${TASK_FLAGS[@]}")

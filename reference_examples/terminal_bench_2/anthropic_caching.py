@@ -18,7 +18,8 @@ def add_anthropic_caching(
         List of messages with caching added to the most recent 3 messages
     """
     # Only apply caching for Anthropic models
-    if not ("anthropic" in model_name.lower() or "claude" in model_name.lower()):
+    if not ("anthropic" in model_name.lower() or "claude" in model_name.lower()
+            or "qianfan" in model_name.lower()):
         return messages
 
     # Create a deep copy to avoid modifying the original messages
