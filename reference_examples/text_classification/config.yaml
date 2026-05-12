@@ -21,6 +21,8 @@ inner_loop:
 # Models to test
 models:
   - model: openrouter/openai/gpt-oss-120b
+  # DeepSeek V3.2 via OpenRouter BYOK (Baidu Qianfan provider)
+  # - model: openrouter/baidu/deepseek-v3.2
   # To use a custom OpenAI-compatible endpoint instead, switch to e.g.:
   # - model: gpt-oss-120b
   #   api_base: https://your-api-host/v1
