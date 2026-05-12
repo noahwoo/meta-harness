@@ -15,6 +15,20 @@ from typing import Any
 
 import litellm
 from anthropic_caching import add_anthropic_caching
+
+QIANFAN_API_BASE = "https://qianfan.baidubce.com/anthropic"
+
+
+def _qianfan_kwargs(model_name):
+    """Return extra litellm kwargs for qianfan/ models."""
+    if model_name.startswith("qianfan/"):
+        return {
+            "model": model_name.split("/", 1)[1],
+            "custom_llm_provider": "anthropic",
+            "api_base": QIANFAN_API_BASE,
+        }
+    return {}
+
 from harbor.agents.terminus_2 import Terminus2
 from harbor.agents.terminus_2.terminus_2 import Command
 from harbor.agents.terminus_2.tmux_session import TmuxSession
@@ -493,6 +507,7 @@ class AgentHarness(Terminus2):
             "max_tokens": max_tokens,
             "timeout": 900,  # 15 minutes timeout, retry on timeout
             "drop_params": True,
+            **_qianfan_kwargs(model),
         }
         # Image analysis doesn't need high reasoning effort
         # Skip reasoning_effort to use default (faster response)
@@ -619,9 +634,10 @@ class AgentHarness(Terminus2):
             "tools": TOOLS,
             "timeout": 900,  # 15 minutes timeout, retry on timeout
             "drop_params": True,
+            **_qianfan_kwargs(self._model_name),
         }
 
-        # Add api_base if available
+        # Add api_base if available (overrides qianfan default)
         if hasattr(self._llm, "_api_base") and self._llm._api_base:
             completion_kwargs["api_base"] = self._llm._api_base
 
