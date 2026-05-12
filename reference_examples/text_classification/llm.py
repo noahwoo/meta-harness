@@ -44,11 +44,15 @@ KNOWN_PROVIDER_PREFIXES = (
     "ollama/",
     "openai/",
     "openrouter/",
+    "qianfan/",
     "together_ai/",
     "togethercomputer/",
     "vertex_ai/",
     "xai/",
 )
+
+QIANFAN_API_BASE = "https://qianfan.baidubce.com/anthropic"
+QIANFAN_API_KEY_ENV = "QIANFAN_API_KEY"
 
 MAX_PROMPT_CHARS = 224_000
 
@@ -158,6 +162,8 @@ class ProviderLLM:
         return False
 
     def _normalized_model(self) -> str:
+        if self.model.startswith("qianfan/"):
+            return f"anthropic/{self.model[len('qianfan/'):]}"
         if self.api_base and not self.model.startswith(KNOWN_PROVIDER_PREFIXES):
             return f"openai/{self.model}"
         return self.model
@@ -211,7 +217,10 @@ class ProviderLLM:
 
         call_kwargs = dict(kwargs)
         call_kwargs["timeout"] = 600.0
-        if self.api_base:
+        if self.model.startswith("qianfan/"):
+            call_kwargs["base_url"] = self.api_base or QIANFAN_API_BASE
+            call_kwargs["api_key"] = self.api_key or os.environ.get(QIANFAN_API_KEY_ENV, "")
+        elif self.api_base:
             call_kwargs["base_url"] = self.api_base
             call_kwargs.setdefault("api_key", self.api_key or "local")
         elif self.api_key is not None:
@@ -235,7 +244,7 @@ class ProviderLLM:
             except Exception:
                 output_tokens = 0
 
-        if self.api_base:
+        if self.api_base or self.model.startswith("qianfan/"):
             cost = 0.0
         else:
             try:
